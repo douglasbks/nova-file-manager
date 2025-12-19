@@ -610,7 +610,27 @@ const useBrowserStore = defineStore('nova-file-manager/browser', {
         this.queueFile({ file })
       })
 
-      uploader.on('fileAdded', () => uploader.upload())
+      const slugify = (text: string): string => {
+        return text
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '')
+          .replace(/[^a-zA-Z0-9]+/g, '-')
+          .toLowerCase()
+          .replace(/(^-|-$)/g, '')
+      }
+
+      uploader.on('fileAdded', (file: any) => {
+        const parts = file.fileName.split('.')
+        const ext = parts.pop()
+        const name = parts.join('.')
+
+        const slugName = slugify(name)
+        const unique = Date.now()
+
+        file.fileName = `${slugName}-${unique}.${ext}`
+
+        uploader.upload()
+      })
 
       uploader.on('fileSuccess', file => {
         this.updateQueue({
