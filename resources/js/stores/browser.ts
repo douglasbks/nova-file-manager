@@ -629,6 +629,8 @@ const useBrowserStore = defineStore('nova-file-manager/browser', {
         this.queueFile({ file: renamedFile })
       })
 
+      uploader.upload()
+
       uploader.on('fileSuccess', (file: any) => {
         this.updateQueue({
           id: file.file.name,
