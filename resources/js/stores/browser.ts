@@ -583,8 +583,7 @@ const useBrowserStore = defineStore('nova-file-manager/browser', {
         }),
       })
     },
-
-    upload({ files }: { files: File[] }) {
+    upload({ files }: { files: File[] }): void {
       this.isUploading = true
 
       const uploader = new Resumable({
@@ -604,12 +603,6 @@ const useBrowserStore = defineStore('nova-file-manager/browser', {
         },
       })
 
-      files.forEach(file => {
-        uploader.addFile(file)
-
-        this.queueFile({ file })
-      })
-
       const slugify = (text: string): string => {
         return text
           .normalize('NFD')
@@ -619,40 +612,48 @@ const useBrowserStore = defineStore('nova-file-manager/browser', {
           .replace(/(^-|-$)/g, '')
       }
 
-      uploader.on('fileAdded', (file: any) => {
-        const parts = file.fileName.split('.')
+      files.forEach((originalFile: File) => {
+        const parts = originalFile.name.split('.')
         const ext = parts.pop()
         const name = parts.join('.')
 
         const slugName = slugify(name)
-        const unique = Date.now()
+        const newName = `${slugName}.${ext}`
 
-        file.fileName = `${slugName}-${unique}.${ext}`
+        const renamedFile = new File([originalFile], newName, {
+          type: originalFile.type,
+          lastModified: originalFile.lastModified,
+        })
 
-        uploader.upload()
+        uploader.addFile(renamedFile)
+        this.queueFile({ file: renamedFile })
       })
 
-      uploader.on('fileSuccess', file => {
+      uploader.on('fileSuccess', (file: any) => {
         this.updateQueue({
-          id: file.fileName,
+          id: file.file.name,
           status: true,
         })
       })
 
-      uploader.on('fileProgress', file => {
+      uploader.on('fileProgress', (file: any) => {
         this.updateQueue({
-          id: file.fileName,
+          id: file.file.name,
           ratio: Math.floor(file.progress(false) * 100),
         })
       })
 
-      uploader.on('fileError', (file, message) => {
+      uploader.on('fileError', (file: any, message: string) => {
         this.updateQueue({
-          id: file.fileName,
+          id: file.file.name,
           status: false,
         })
 
-        window.Nova.error(JSON.parse(message).message)
+        try {
+          window.Nova.error(JSON.parse(message).message)
+        } catch {
+          window.Nova.error('Erro ao enviar arquivo.')
+        }
       })
     },
 
